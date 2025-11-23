@@ -1,51 +1,6 @@
 <!DOCTYPE html>
-<html lang="uz">
-<head>
-<meta charset="UTF-8">
-<title>Trend Lines Viewer</title>
-
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-
-<style>
-  body {
-    margin: 0;
-    background: #ffffff;
-  }
-  #chart {
-    width: 100vw;
-    height: 100vh;
-  }
-</style>
-</head>
-
-<body>
-
-<!-- Grafik joyi -->
-<div id="chart"></div>
-
-<script>
-    // Grafik yaratish
-    const chart = LightweightCharts.createChart(document.getElementById("chart"), {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        layout: {
-            background: { color: "#ffffff" },
-            textColor: "#000"
-        },
-        grid: {
-            vertLines: { color: "#eee" },
-            horzLines: { color: "#eee" }
-        }
-    });
-
-    // Kandellar
-    const candleSeries = chart.addCandlestickSeries();
-
-    // TradingView demo ma'lumotlar
-    fetch("https://unpkg.com/lightweight-charts@4.0.0/dist/candles.json")
-        .then(r => r.json())
-        .then(data => candleSeries.setData(data));
-</script>
-
-</body>
+<html>
+  <body style="background: yellow; font-size: 40px;">
+    TEST PAGE OK !
+  </body>
 </html>
