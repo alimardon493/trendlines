@@ -2,223 +2,44 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <title>EURUSD Trend Robot</title>
+    <title>EURUSD Chart</title>
 
-    <!-- Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
     <style>
-        body {
-            margin: 0;
-            background: #ffffff;
-            font-family: Arial, sans-serif;
-        }
-        #chart {
-            width: 100vw;
-            height: 100vh;
-        }
-        #toggleBtn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: red;
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            cursor: pointer;
-            z-index: 10;
-        }
+        body { margin: 0; background: #ffffff; }
+        #chart { width: 100vw; height: 100vh; }
     </style>
 </head>
+
 <body>
+    <div id="chart"></div>
 
-<div id="toggleBtn">Trend chiziqlar: YONIQ</div>
-<div id="chart"></div>
+    <script>
+        // Grafik yaratish
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            layout: { background: { color: "#ffffff" }, textColor: "#000" },
+            rightPriceScale: { visible: true },
+            timeScale: { borderVisible: true },
+        });
 
-<script>
-// --------- Parametrlar (MQL4 dagiga o‘xshash) ----------
-const API_KEY        = "KY46C6NO0OQGX7NA";
-const SYMBOL_FROM    = "EUR";
-const SYMBOL_TO      = "USD";
-const INTERVAL       = "1min";     // 1 daqiqalik barlar
-const LOOKBACK_BARS  = 300;        // nechta sham tahlil qilinadi
-const EXTREMUM_DEPTH = 5;          // Ekstrimum chuqurligi
-const TREND_LEN      = 10;         // Trend chiziq uzunligi (barlar soni)
-const PRICE_PER_BAR  = 10;         // har bar uchun punkt
-const PIP            = 0.0001;     // EURUSD pip
-//--------------------------------------------------------
+        const candleSeries = chart.addCandlestickSeries();
 
-// Grafik yaratish
-const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    layout: { background: { color: '#ffffff' }, textColor: '#000' },
-    grid: {
-        vertLines: { color: '#eeeeee' },
-        horzLines: { color: '#eeeeee' },
-    },
-});
+        // TradingView demo API — EURUSD (REAL-TIME YANGILANADI)
+        fetch("https://api.binance.com/api/v3/klines?symbol=EURUSDT&interval=1h")
+            .then(res => res.json())
+            .then(data => {
+                const formatted = data.map(c => ({
+                    time: c[0] / 1000,
+                    open: parseFloat(c[1]),
+                    high: parseFloat(c[2]),
+                    low: parseFloat(c[3]),
+                    close: parseFloat(c[4]),
+                }));
 
-const candleSeries = chart.addCandlestickSeries();
-
-// trend liniyalar saqlanadigan massiv
-let trendLineSeries = [];
-let trendVisible = true;
-
-// Oyna o‘lchami o‘zgarsa grafikni moslashtirish
-window.addEventListener('resize', () => {
-    chart.applyOptions({ width: window.innerWidth, height: window.innerHeight });
-});
-
-// AlphaVantage URL
-const URL = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${SYMBOL_FROM}&to_symbol=${SYMBOL_TO}&interval=${INTERVAL}&outputsize=compact&apikey=${API_KEY}`;
-
-// AlphaVantage vaqtini chart formatiga o‘tkazish
-function toTimestamp(str) {
-    // "2024-11-23 20:15:00" -> sekunda
-    return Math.floor(new Date(str.replace(' ', 'T') + 'Z').getTime() / 1000);
-}
-
-// Ekstrimum funksiyalari (MQL4 dagiga o‘xshash)
-function isLocalHigh(data, i) {
-    for (let j = 1; j <= EXTREMUM_DEPTH; j++) {
-        if (data[i].high <= data[i - j].high || data[i].high <= data[i + j].high)
-            return false;
-    }
-    return true;
-}
-
-function isLocalLow(data, i) {
-    for (let j = 1; j <= EXTREMUM_DEPTH; j++) {
-        if (data[i].low >= data[i - j].low || data[i].low >= data[i + j].low)
-            return false;
-    }
-    return true;
-}
-
-// Trend liniyalarni chizish
-function drawTrendLines(data) {
-    // Eski liniyalarni o‘chiramiz
-    for (const s of trendLineSeries) {
-        chart.removeSeries(s);
-    }
-    trendLineSeries = [];
-
-    const totalBars = Math.min(data.length - EXTREMUM_DEPTH - TREND_LEN - 1, LOOKBACK_BARS);
-    const startIndex = data.length - totalBars - 1;
-    const priceDelta = PRICE_PER_BAR * TREND_LEN * PIP;
-
-    for (let idx = startIndex + totalBars; idx >= startIndex + EXTREMUM_DEPTH + TREND_LEN; idx--) {
-        // local index i = idx
-        const i = idx;
-
-        if (i - TREND_LEN < 0 || i + EXTREMUM_DEPTH >= data.length) continue;
-
-        if (isLocalHigh(data, i)) {
-            const p = data[i].high;
-            const t1 = data[i].time;
-            const t2 = data[i - TREND_LEN].time;
-
-            // yuqoriga
-            let sUp = chart.addLineSeries({ color: 'blue', lineWidth: 1 });
-            sUp.setData([
-                { time: t1, value: p },
-                { time: t2, value: p + priceDelta }
-            ]);
-            trendLineSeries.push(sUp);
-
-            // pastga
-            let sDown = chart.addLineSeries({ color: 'blue', lineWidth: 1 });
-            sDown.setData([
-                { time: t1, value: p },
-                { time: t2, value: p - priceDelta }
-            ]);
-            trendLineSeries.push(sDown);
-        }
-
-        if (isLocalLow(data, i)) {
-            const p = data[i].low;
-            const t1 = data[i].time;
-            const t2 = data[i - TREND_LEN].time;
-
-            // yuqoriga
-            let sUp = chart.addLineSeries({ color: 'red', lineWidth: 1 });
-            sUp.setData([
-                { time: t1, value: p },
-                { time: t2, value: p + priceDelta }
-            ]);
-            trendLineSeries.push(sUp);
-
-            // pastga
-            let sDown = chart.addLineSeries({ color: 'red', lineWidth: 1 });
-            sDown.setData([
-                { time: t1, value: p },
-                { time: t2, value: p - priceDelta }
-            ]);
-            trendLineSeries.push(sDown);
-        }
-    }
-}
-
-// API’dan ma’lumot olib grafikni yangilash
-async function loadData() {
-    try {
-        const res = await fetch(URL);
-        const json = await res.json();
-
-        const raw = json["Time Series FX (1min)"];
-        if (!raw) {
-            console.log("API limit yoki xato:", json);
-            return;
-        }
-
-        let candles = [];
-        for (let t in raw) {
-            candles.push({
-                time: toTimestamp(t),
-                open: parseFloat(raw[t]["1. open"]),
-                high: parseFloat(raw[t]["2. high"]),
-                low: parseFloat(raw[t]["3. low"]),
-                close: parseFloat(raw[t]["4. close"]),
+                candleSeries.setData(formatted);
             });
-        }
-
-        // vaqt bo‘yicha eski -> yangi
-        candles.sort((a, b) => a.time - b.time);
-
-        candleSeries.setData(candles);
-
-        if (trendVisible) {
-            drawTrendLines(candles);
-        }
-    } catch (e) {
-        console.log("Xatolik:", e);
-    }
-}
-
-// Dastlabki yuklash
-loadData();
-
-// 1 daqiqada bir yangilab turish (AlphaVantage limitini buzmaslik uchun)
-setInterval(loadData, 60 * 1000);
-
-// Tugma orqali trend liniyalarni yoqish/o‘chirish
-const btn = document.getElementById('toggleBtn');
-btn.addEventListener('click', () => {
-    trendVisible = !trendVisible;
-
-    if (trendVisible) {
-        btn.textContent = "Trend chiziqlar: YONIQ";
-        // qayta chizish uchun oxirgi ma’lumotni qayta yuklaymiz
-        loadData();
-    } else {
-        btn.textContent = "Trend chiziqlar: O‘CHI";
-        for (const s of trendLineSeries) chart.removeSeries(s);
-        trendLineSeries = [];
-    }
-});
-</script>
+    </script>
 
 </body>
 </html>
