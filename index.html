@@ -1,87 +1,50 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Trend Lines Viewer</title>
+<meta charset="UTF-8">
+<title>Trend Lines Viewer</title>
 
-    <!-- TradingView Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
-    <style>
-        body {
-            margin: 0;
-            background: #ffffff;
-            font-family: Arial;
-        }
-
-        #chart {
-            width: 100%;
-            height: 600px;
-        }
-
-        #btn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: red;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-    </style>
+<style>
+  body {
+    margin: 0;
+    background: #ffffff;
+  }
+  #chart {
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
 </head>
 
 <body>
 
-<div id="btn">Trend chiziqlar: YONIQ</div>
+<!-- Grafik joyi -->
 <div id="chart"></div>
 
 <script>
-    // ======= Grafik yaratish ========
-    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+    // Grafik yaratish
+    const chart = LightweightCharts.createChart(document.getElementById("chart"), {
         width: window.innerWidth,
-        height: 600,
+        height: window.innerHeight,
         layout: {
-            background: { color: '#ffffff' },
-            textColor: '#333',
+            background: { color: "#ffffff" },
+            textColor: "#000"
         },
         grid: {
-            vertLines: { color: '#eee' },
-            horzLines: { color: '#eee' },
+            vertLines: { color: "#eee" },
+            horzLines: { color: "#eee" }
         }
     });
 
+    // Kandellar
     const candleSeries = chart.addCandlestickSeries();
 
-    // ======= Demo ma'lumot yaratamiz (grafik ko‘rinishi uchun) ========
-    let data = [];
-    let price = 100;
-
-    for (let i = 0; i < 200; i++) {
-        let open = price;
-        let close = open + (Math.random() - 0.5) * 2;
-        let high = Math.max(open, close) + Math.random();
-        let low = Math.min(open, close) - Math.random();
-
-        data.push({
-            time: i,
-            open: open,
-            high: high,
-            low: low,
-            close: close
-        });
-
-        price = close;
-    }
-
-    candleSeries.setData(data);
-
-    // ======= Window resize (telefon/kompyuter ekraniga moslashadi) ========
-    window.addEventListener('resize', () => {
-        chart.applyOptions({ width: window.innerWidth });
-    });
-
+    // TradingView demo ma'lumotlar
+    fetch("https://unpkg.com/lightweight-charts@4.0.0/dist/candles.json")
+        .then(r => r.json())
+        .then(data => candleSeries.setData(data));
 </script>
 
 </body>
