@@ -1,62 +1,32 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <title>Trend Lines Robot - Web Version</title>
+string API_KEY = "KY46C6NO0OQGX7NA";
 
-    <!-- TradingView Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+double GetPrice()
+{
+   string url = "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=EUR&to_currency=USD&apikey=" + API_KEY;
 
-    <style>
-        body { 
-            margin: 0; 
-            background: #ffffff;
-        }
-        #chart {
-            width: 100vw;
-            height: 100vh;
-        }
+   char data[];
+   int res = WebRequest("GET", url, NULL, 5000, data, NULL);
 
-        #btn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 8px 15px;
-            background: red;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-    </style>
-</head>
+   if(res != 200) {
+      Print("API error: ", res);
+      return 0;
+   }
 
-<body>
+   string json = CharArrayToString(data);
+   string ask = Parse(json, "\"8. Bid Price\": \"", "\"");
+   
+   return StrToDouble(ask);
+}
 
-    <div id="btn">Trend chiziqlar: YONIQ</div>
-    <div id="chart"></div>
+// JSON dan qiymat olish
+string Parse(string text, string start, string end)
+{
+   int a = StringFind(text, start);
+   if(a < 0) return "";
+   a += StringLen(start);
 
-    <script>
-        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-            width: window.innerWidth,
-            height: window.innerHeight,
-            layout: { background: { color: '#ffffff' }, textColor: '#000' },
-            grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
-        });
+   int b = StringFind(text, end, a);
+   if(b < 0) return "";
 
-        const candleSeries = chart.addCandlestickSeries();
-
-        // TEST DATA (Grafik ishlashi uchun)
-        // Keyin buni real MT4 dan API orqali bog‘lab beraman
-        candleSeries.setData([
-            { time: '2023-01-01', open: 110, high: 120, low: 105, close: 118 },
-            { time: '2023-01-02', open: 118, high: 130, low: 112, close: 126 },
-            { time: '2023-01-03', open: 126, high: 140, low: 120, close: 134 },
-            { time: '2023-01-04', open: 134, high: 150, low: 125, close: 148 },
-        ]);
-
-        // Keyin bu yerga trend chizish funksiyalarini qo‘shib beraman
-    </script>
-
-</body>
-</html>
+   return StringSubstr(text, a, b - a);
+}
