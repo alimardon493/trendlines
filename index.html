@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Trend Line Robot - Web Version</title>
+
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
+<style>
+    body { margin: 0; background: #111; }
+    #chart { width: 100vw; height: 100vh; }
+    #btn {
+        position: absolute; top: 10px; left: 10px;
+        padding: 10px 20px;
+        background: red; color: #fff;
+        border-radius: 6px; cursor: pointer;
+        font-size: 14px;
+        z-index: 9999;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="btn">Trend chiziqlar: YONIQ</div>
+<div id="chart"></div>
+
+<script>
+
+// ======================================================
+//    ASOSIY GRAFIKNI YARATISH
+// ======================================================
+
+const chart = LightweightCharts.createChart(
+    document.getElementById('chart'),
+    { width: window.innerWidth, height: window.innerHeight }
+);
+
+const candleSeries = chart.addCandlestickSeries();
+
+// DEMO MA'LUMOT (tasodifiy shamlar)
+function generateDemoData(count = 300) {
+    let data = [];
+    let price = 1.1000;
+
+    for (let i = 0; i < count; i++) {
+        let open = price;
+        let high = open + Math.random() * 0.0020;
+        let low = open - Math.random() * 0.0020;
+        let close = low + Math.random() * (high - low);
+
+        data.push({
+            time: i,
+            open, high, low, close
+        });
+
+        price = close;
+    }
+    return data;
+}
+
+let bars = generateDemoData(500);
+candleSeries.setData(bars);
+
+// ======================================================
+//    MQL4 DAGI LOGIKANI JAVASCRIPTGA KO‘CHIRISH
+// ======================================================
+
+let ExtremumDepth = 5;
+let TrendLineLength = 10;
+let PricePerBar = 10;
+let TrendLinesVisible = true;
+
+let trendLines = [];
+
+// LOCAL HIGH
+function isLocalHigh(i) {
+    for (let j = 1; j <= ExtremumDepth; j++) {
+        if (bars[i].high <= bars[i - j].high) return false;
+        if (bars[i].high <= bars[i + j].high) return false;
+    }
+    return true;
+}
+
+// LOCAL LOW
+function isLocalLow(i) {
+    for (let j = 1; j <= ExtremumDepth; j++) {
+        if (bars[i].low >= bars[i - j].low) return false;
+        if (bars[i].low >= bars[i + j].low) return false;
+    }
+    return true;
+}
+
+// TREND LINIYALARNI O‘CHIRISH
+function deleteTrendLines() {
+    for (let line of trendLines) {
+        chart.removeSeries(line);
+    }
+    trendLines = [];
+}
+
+// TREND LINIYALARNI CHIZISH
+function drawTrendLines() {
+
+    deleteTrendLines();
+
+    let color = '#33aaff';
+    let priceDelta = PricePerBar * TrendLineLength * 0.0001;
+
+    for (let i = 50; i < bars.length - ExtremumDepth - TrendLineLength; i++) {
+
+        if (isLocalHigh(i)) {
+            let p1 = bars[i];
+            let p2 = bars[i + TrendLineLength];
+
+            let lineUp = chart.addLineSeries({ color });
+            lineUp.setData([
+                { time: p1.time, value: p1.high },
+                { time: p2.time, value: p1.high + priceDelta }
+            ]);
+            trendLines.push(lineUp);
+
+            let lineDown = chart.addLineSeries({ color });
+            lineDown.setData([
+                { time: p1.time, value: p1.high },
+                { time: p2.time, value: p1.high - priceDelta }
+            ]);
+            trendLines.push(lineDown);
+        }
+
+        if (isLocalLow(i)) {
+            let p1 = bars[i];
+            let p2 = bars[i + TrendLineLength];
+
+            let lineUp = chart.addLineSeries({ color });
+            lineUp.setData([
+                { time: p1.time, value: p1.low },
+                { time: p2.time, value: p1.low + priceDelta }
+            ]);
+            trendLines.push(lineUp);
+
+            let lineDown = chart.addLineSeries({ color });
+            lineDown.setData([
+                { time: p1.time, value: p1.low },
+                { time: p2.time, value: p1.low - priceDelta }
+            ]);
+            trendLines.push(lineDown);
+        }
+    }
+}
+
+drawTrendLines();
+
+// ======================================================
+//   KALIT TUGMA (ON / OFF)
+// ======================================================
+
+document.getElementById('btn').onclick = () => {
+    TrendLinesVisible = !TrendLinesVisible;
+    let btn = document.getElementById('btn');
+
+    if (TrendLinesVisible) {
+        btn.innerText = "Trend chiziqlar: YONIQ";
+        btn.style.background = "red";
+        drawTrendLines();
+    } else {
+        btn.innerText = "Trend chiziqlar: O‘CHI";
+        btn.style.background = "gray";
+        deleteTrendLines();
+    }
+};
+
+</script>
+
+</body>
+</html>
